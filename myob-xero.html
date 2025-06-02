@@ -1,0 +1,954 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MYOB to Xero Functions</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'myob-xero.css' %}">
+    <style>
+        .file-input-group {
+            display: none;
+        }
+
+        .file-input-group.active {
+            display: block !important;
+        }
+
+        .status {
+            margin-top: 15px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header-images">
+        <img src="{% static 'Images/myob_bg.png' %}" alt="MYOB Logo" class="logo">
+        <img src="{% static 'Images/right-arrow.png' %}" alt="Arrow" class="arrow">
+        <img src="{% static 'Images/xero.webp' %}" alt="Xero Logo" class="logo">
+    </div>
+
+    <div class="container">
+        <h1>MYOB to Xero</h1>
+
+        <div class="mb-3">
+            <label for="entityName" class="form-label">Entity Name:</label>
+            <input type="text" id="entityName" class="form-control" value="{{ entity_name|default:'' }}" disabled
+                style="background-color: #e9ecef;">
+        </div>
+
+        <p>Select a function below.</p>
+
+        <div class="function-list">
+            <h4>Function:</h4>
+            <select id="functionSelect" class="form-select" onchange="updateFileInputs()">
+                <option value="">-- Select --</option>
+                <option value="coa">Chart of Accounts</option>
+                <option value="customer">Customer Master</option>
+                <option value="vendor">Vendor Master</option>
+                <option value="item">Item Master</option>
+                <option value="job">Job/Tracking Class</option>
+                <option value="sales_invoice_service">Sales Invoice (Service)</option>
+                <option value="purchase_bill_service">Purchase Bill (Service)</option>
+                <option value="sales_invoice_product">Sales Invoice (Product)</option>
+                <option value="purchase_bill_product">Purchase Bill (Product)</option>
+                <option value="manual_journal">Manual Journal</option>
+                <option value="spend_money">Spend money</option>
+                <option value="receive_money">Receive money</option>
+                <option value="payroll_journal">Payroll Journal</option>
+                <option value="bill_payment">Bill Payment</option>
+                <option value="invoice_payment">Invoice Payment</option>
+                <option value="open_ap">Open AP</option>
+                <option value="open_ar">Open AR</option>
+            </select>
+        </div>
+
+        <form id="conversionForm" enctype="multipart/form-data" onsubmit="event.preventDefault(); convertFile();">
+            {% csrf_token %}
+
+            <!-- Single file input for most conversions -->
+            <div id="singleFileInput" class="upload-section mt-3 file-input-group">
+                <label for="fileInput" class="form-label">Upload File:</label>
+                <input type="file" id="fileInput" class="form-control" accept=".csv,.xlsx,.xls"
+                    onchange="console.log('fileInput selected:', this.files[0] ? this.files[0].name : 'None')">
+                <label for="fileEncoding" class="form-label mt-2">File Encoding (for CSV):</label>
+                <select id="fileEncoding" name="file_encoding" class="form-select">
+                    <option value="utf-8">UTF-8</option>
+                    <option value="latin1">Latin1</option>
+                    <option value="iso-8859-1">ISO-8859-1</option>
+                    <option value="cp1252">Windows-1252</option>
+                    <option value="utf-16">UTF-16</option>
+                </select>
+            </div>
+
+            <!-- Customer: Single file -->
+            <div id="customerInputs" class="upload-section mt-3 file-input-group">
+                <label for="customer_file" class="form-label">Customer CSV (Required columns: First Name, Co./Last
+                    Name):</label>
+                <input type="file" id="customer_file" name="customer_file" class="form-control" accept=".csv"
+                    onchange="console.log('customer_file selected:', this.files[0] ? this.files[0].name : 'None')">
+            </div>
+
+            <!-- Job: Single file -->
+            <div id="jobInputs" class="upload-section mt-3 file-input-group">
+                <label for="job_file" class="form-label">Job CSV:</label>
+                <input type="file" id="job_file" name="job_file" class="form-control" accept=".csv"
+                    onchange="console.log('job_file selected:', this.files[0] ? this.files[0].name : 'None')">
+            </div>
+
+            <!-- Manual Journal: Three files -->
+            <div id="manualJournalInputs" class="upload-section mt-3 file-input-group">
+                <label for="manual_journal_file" class="form-label">Manual Journal Excel/CSV:</label>
+                <input type="file" id="manual_journal_file" name="manual_journal_file" class="form-control"
+                    accept=".xlsx,.xls,.csv"
+                    onchange="console.log('manual_journal_file selected:', this.files[0] ? this.files[0].name : 'None')">
+                <label for="coa_file_manual" class="form-label mt-2">COA CSV:</label>
+                <input type="file" id="coa_file_manual" name="coa_file" class="form-control" accept=".csv"
+                    onchange="console.log('coa_file_manual selected:', this.files[0] ? this.files[0].name : 'None')">
+                <label for="job_file_manual" class="form-label mt-2">Job CSV:</label>
+                <input type="file" id="job_file_manual" name="job_file" class="form-control" accept=".csv"
+                    onchange="console.log('job_file_manual selected:', this.files[0] ? this.files[0].name : 'None')">
+            </div>
+
+            <!-- Payroll Journal: Single file -->
+            <div id="payrollJournalInputs" class="upload-section mt-3 file-input-group">
+                <label for="payroll_journal_file" class="form-label">Payroll Journal Excel:</label>
+                <input type="file" id="payroll_journal_file" name="payroll_journal_file" class="form-control"
+                    accept=".xlsx,.xls"
+                    onchange="console.log('payroll_journal_file selected:', this.files[0] ? this.files[0].name : 'None')">
+            </div>
+
+            <!-- Sales Invoice Service: Three files -->
+            <div id="salesInvoiceServiceInputs" class="upload-section mt-3 file-input-group">
+                <label for="service_invoice_file" class="form-label">Sales Invoice Service CSV:</label>
+                <input type="file" id="service_invoice_file" name="service_invoice_file" class="form-control"
+                    accept=".csv"
+                    onchange="console.log('service_invoice_file selected:', this.files[0] ? this.files[0].name : 'None')">
+                <label for="coa_file_sales_service" class="form-label mt-2">COA CSV:</label>
+                <input type="file" id="coa_file_sales_service" name="coa_file_service" class="form-control"
+                    accept=".csv"
+                    onchange="console.log('coa_file_sales_service selected:', this.files[0] ? this.files[0].name : 'None')">
+                <label for="job_file_sales_service" class="form-label mt-2">Job CSV:</label>
+                <input type="file" id="job_file_sales_service" name="job_file_service" class="form-control"
+                    accept=".csv"
+                    onchange="console.log('job_file_sales_service selected:', this.files[0] ? this.files[0].name : 'None')">
+            </div>
+
+            <!-- Sales Invoice Product: Three files -->
+            <div id="salesInvoiceProductInputs" class="upload-section mt-3 file-input-group">
+                <label for="sales_invoice_product_file" class="form-label">Sales Invoice Product CSV:</label>
+                <input type="file" id="sales_invoice_product_file" name="sales_invoice_product_file"
+                    class="form-control" accept=".csv"
+                    onchange="console.log('sales_invoice_product_file selected:', this.files[0] ? this.files[0].name : 'None')">
+                <label for="coa_file_sales_product" class="form-label mt-2">COA CSV:</label>
+                <input type="file" id="coa_file_sales_product" name="coa_file_product" class="form-control"
+                    accept=".csv"
+                    onchange="console.log('coa_file_sales_product selected:', this.files[0] ? this.files[0].name : 'None')">
+                <label for="job_file_sales_product" class="form-label mt-2">Job CSV:</label>
+                <input type="file" id="job_file_sales_product" name="job_file_product" class="form-control"
+                    accept=".csv"
+                    onchange="console.log('job_file_sales_product selected:', this.files[0] ? this.files[0].name : 'None')">
+            </div>
+
+            <!-- Purchase Invoice Service: Three files -->
+            <div id="purchaseBillServiceInputs" class="upload-section mt-3 file-input-group">
+                <label for="purchase_bill_service_file" class="form-label">Purchase bill Service CSV:</label>
+                <input type="file" id="purchase_bill_service_file" name="purchase_bill_service_file"
+                    class="form-control" accept=".csv"
+                    onchange="console.log('purchase_bill_service_file selected:', this.files[0] ? this.files[0].name : 'None')">
+                <label for="coa_file_purchase_service" class="form-label mt-2">COA CSV:</label>
+                <input type="file" id="coa_file_purchase_service" name="coa_file_service" class="form-control"
+                    accept=".csv"
+                    onchange="console.log('coa_file_purchase_service selected:', this.files[0] ? this.files[0].name : 'None')">
+                <label for="job_file_purchase_service" class="form-label mt-2">Job CSV:</label>
+                <input type="file" id="job_file_purchase_service" name="job_file_service" class="form-control"
+                    accept=".csv"
+                    onchange="console.log('job_file_purchase_service selected:', this.files[0] ? this.files[0].name : 'None')">
+            </div>
+
+            <!-- Purchase Invoice Product: Four files -->
+            <div id="purchaseBillProductInputs" class="upload-section mt-3 file-input-group">
+                <label for="purchase_bill_product_file" class="form-label">Purchase Bill Product
+                    CSV/Excel:</label>
+                <input type="file" id="purchase_bill_product_file" name="purchase_bill_product_file"
+                    class="form-control" accept=".csv,.xlsx,.xls"
+                    onchange="console.log('purchase_bill_product_file selected:', this.files[0] ? this.files[0].name : 'None')">
+                <label for="coa_file_product" class="form-label mt-2">COA CSV:</label>
+                <input type="file" id="coa_file_product" name="coa_file_product" class="form-control" accept=".csv"
+                    onchange="console.log('coa_file_product selected:', this.files[0] ? this.files[0].name : 'None')">
+                <label for="item_file_product" class="form-label mt-2">Item CSV:</label>
+                <input type="file" id="item_file_product" name="item_file_product" class="form-control" accept=".csv"
+                    onchange="console.log('item_file_product selected:', this.files[0] ? this.files[0].name : 'None')">
+                <label for="job_file_product" class="form-label mt-2">Job CSV:</label>
+                <input type="file" id="job_file_product" name="job_file_product" class="form-control" accept=".csv"
+                    onchange="console.log('job_file_product selected:', this.files[0] ? this.files[0].name : 'None')">
+            </div>
+
+            <!-- Invoice Payment: Single file -->
+            <div id="invoicePaymentInputs" class="upload-section mt-3 file-input-group">
+                <label for="invoice_payment_file" class="form-label">Invoice Payment CSV/Excel:</label>
+                <input type="file" id="invoice_payment_file" name="invoice_payment_file" class="form-control"
+                    accept=".csv,.xlsx,.xls"
+                    onchange="console.log('invoice_payment_file selected:', this.files[0] ? this.files[0].name : 'None')">
+            </div>
+
+            <!-- Bill Payment: Single file -->
+            <div id="billPaymentInputs" class="upload-section mt-3 file-input-group">
+                <label for="bill_payment_file" class="form-label">Bill Payment CSV/Excel:</label>
+                <input type="file" id="bill_payment_file" name="bill_payment_file" class="form-control"
+                    accept=".csv,.xlsx,.xls"
+                    onchange="console.log('bill_payment_file selected:', this.files[0] ? this.files[0].name : 'None')">
+            </div>
+
+            <!-- Open AP: Single file -->
+            <div id="openAPInputs" class="upload-section mt-3 file-input-group">
+                <label for="open_ap_file" class="form-label">Open AP CSV/Excel:</label>
+                <input type="file" id="open_ap_file" name="open_ap_file" class="form-control" accept=".csv,.xlsx,.xls"
+                    onchange="console.log('open_ap_file selected:', this.files[0] ? this.files[0].name : 'None')">
+            </div>
+
+            <!-- Open AR: Single file -->
+            <div id="openARInputs" class="upload-section mt-3 file-input-group">
+                <label for="open_ar_file" class="form-label">Open AR CSV/Excel:</label>
+                <input type="file" id="open_ar_file" name="open_ar_file" class="form-control" accept=".csv,.xlsx,.xls"
+                    onchange="console.log('open_ar_file selected:', this.files[0] ? this.files[0].name : 'None')">
+            </div>
+
+            <!-- Receive Money: Three files -->
+            <div id="receiveMoneyInputs" class="upload-section mt-3 file-input-group">
+                <label for="csv_file" class="form-label">Receive Money CSV/Excel:</label>
+                <input type="file" id="csv_file" name="csv_file" class="form-control" accept=".csv,.xlsx,.xls">
+                <label for="coa_file_receive" class="form-label mt-2">COA CSV:</label>
+                <input type="file" id="coa_file_receive" name="coa_file" class="form-control" accept=".csv">
+                <label for="job_file_receive" class="form-label mt-2">Job CSV:</label>
+                <input type="file" id="job_file_receive" name="job_file" class="form-control" accept=".csv">
+            </div>
+
+            <!-- Spend Money: Three files -->
+            <div id="spendMoneyInputs" class="upload-section mt-3 file-input-group">
+                <label for="spend_money_file" class="form-label">Spend Money CSV/Excel:</label>
+                <input type="file" id="spend_money_file" name="spend_money_file" class="form-control"
+                    accept=".csv,.xlsx,.xls"
+                    onchange="console.log('spend_money_file selected:', this.files[0] ? this.files[0].name : 'None')">
+                <label for="coa_file" class="form-label mt-2">COA CSV/Excel:</label>
+                <input type="file" id="coa_file" name="coa_file" class="form-control" accept=".csv,.xlsx,.xls"
+                    onchange="console.log('coa_file selected:', this.files[0] ? this.files[0].name : 'None')">
+                <label for="job_file" class="form-label mt-2">Job CSV/Excel:</label>
+                <input type="file" id="job_file" name="job_file" class="form-control" accept=".csv,.xlsx,.xls"
+                    onchange="console.log('job_file selected:', this.files[0] ? this.files[0].name : 'None')">
+            </div>
+
+            <div id="buttonGroup" class="mt-3">
+                <button id="convertBtn" class="btn btn-primary" type="submit">Convert</button>
+            </div>
+
+            <p id="status" class="status"></p>
+        </form>
+
+        <div class="container mt-4 text-center" style="padding: 20px; margin-left: -15px">
+            <a href="{% url 'main' %}" class="btn btn-secondary">Go Back to Main Page</a>
+        </div>
+    </div>
+
+    <script>
+        console.log('Script loaded');
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            console.log(`CSRF cookie (${name}):`, cookieValue || 'Not found, using form token');
+            return cookieValue || document.querySelector('input[name="csrfmiddlewaretoken"]')?.value;
+        }
+
+        function updateFileInputs() {
+            console.log('updateFileInputs() called');
+            const functionName = document.getElementById('functionSelect').value;
+            console.log('Selected function:', functionName);
+            const fileInputGroups = [
+                'singleFileInput', 'customerInputs', 'jobInputs',
+                'manualJournalInputs', 'payrollJournalInputs', 'salesInvoiceServiceInputs',
+                'salesInvoiceProductInputs', 'purchaseBillServiceInputs', 'purchaseBillProductInputs',
+                'invoicePaymentInputs', 'billPaymentInputs', 'openAPInputs', 'openARInputs',
+                'receiveMoneyInputs', 'spendMoneyInputs'
+            ];
+
+            fileInputGroups.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    console.log(`Hiding: ${id}`);
+                    element.classList.remove('active');
+                } else {
+                    console.warn(`Element not found: ${id}`);
+                }
+            });
+
+            let targetInputGroup;
+            if (functionName === 'customer') {
+                targetInputGroup = document.getElementById('customerInputs');
+            } else if (functionName === 'job') {
+                targetInputGroup = document.getElementById('jobInputs');
+            } else if (functionName === 'manual_journal') {
+                targetInputGroup = document.getElementById('manualJournalInputs');
+            } else if (functionName === 'payroll_journal') {
+                targetInputGroup = document.getElementById('payrollJournalInputs');
+            } else if (functionName === 'sales_invoice_service') {
+                targetInputGroup = document.getElementById('salesInvoiceServiceInputs');
+            } else if (functionName === 'sales_invoice_product') {
+                targetInputGroup = document.getElementById('salesInvoiceProductInputs');
+            } else if (functionName === 'purchase_bill_service') {
+                targetInputGroup = document.getElementById('purchaseBillServiceInputs');
+            } else if (functionName === 'purchase_bill_product') {
+                targetInputGroup = document.getElementById('purchaseBillProductInputs');
+            } else if (functionName === 'invoice_payment') {
+                targetInputGroup = document.getElementById('invoicePaymentInputs');
+            } else if (functionName === 'bill_payment') {
+                targetInputGroup = document.getElementById('billPaymentInputs');
+            } else if (functionName === 'open_ap') {
+                targetInputGroup = document.getElementById('openAPInputs');
+            } else if (functionName === 'open_ar') {
+                targetInputGroup = document.getElementById('openARInputs');
+            } else if (functionName === 'receive_money') {
+                targetInputGroup = document.getElementById('receiveMoneyInputs');
+            } else if (functionName === 'spend_money') {
+                targetInputGroup = document.getElementById('spendMoneyInputs');
+            } else if (functionName) {
+                targetInputGroup = document.getElementById('singleFileInput');
+            }
+            console.log('Target input group:', targetInputGroup?.id || 'None');
+            if (targetInputGroup) {
+                targetInputGroup.classList.add('active');
+                console.log(`Showing: ${targetInputGroup.id}`);
+            } else {
+                console.warn('No target input group found for function:', functionName);
+            }
+
+            document.querySelectorAll('input[type="file"]').forEach(input => {
+                input.value = '';
+                console.log(`Cleared input: ${input.id}`);
+            });
+            document.getElementById('status').innerText = '';
+            resetButtons();
+        }
+
+        function resetButtons() {
+            console.log('resetButtons() called');
+            const convertBtn = document.getElementById('convertBtn');
+            if (convertBtn) {
+                convertBtn.disabled = false;
+                convertBtn.innerText = 'Convert';
+                convertBtn.classList.add('btn-primary');
+                convertBtn.classList.remove('btn-secondary');
+                console.log('Reset convertBtn');
+            } else {
+                console.error('convertBtn not found');
+            }
+        }
+
+        const DEBUG = true;
+
+        function convertFile() {
+            console.log('convertFile() started');
+            try {
+                const functionSelect = document.getElementById('functionSelect');
+                const status = document.getElementById('status');
+                const convertBtn = document.getElementById('convertBtn');
+                console.log('functionSelect:', !!functionSelect);
+                console.log('status:', !!status);
+                console.log('convertBtn:', !!convertBtn);
+
+                if (!functionSelect || !status || !convertBtn) {
+                    console.error('Missing critical DOM elements');
+                    status.innerText = 'Error: Form elements not found.';
+                    status.style.color = 'red';
+                    return;
+                }
+
+                const functionName = functionSelect.value;
+                console.log('Function selected:', functionName);
+
+                if (!functionName) {
+                    status.innerText = 'Please select a conversion type.';
+                    status.style.color = 'red';
+                    console.log('No function selected');
+                    return;
+                }
+
+                let files = [];
+                console.log('Checking file inputs for:', functionName);
+                if (functionName === 'customer') {
+                    const customerFile = document.getElementById('customer_file')?.files[0];
+                    console.log('customerFile:', customerFile ? customerFile.name : 'None');
+                    if (!customerFile) {
+                        status.innerText = 'Please upload a Customer CSV file with columns: First Name, Co./Last Name.';
+                        status.style.color = 'red';
+                        console.log('No Customer file uploaded');
+                        return;
+                    }
+                    if (!customerFile.name.endsWith('.csv')) {
+                        status.innerText = 'Customer file must be a valid CSV file.';
+                        status.style.color = 'red';
+                        console.log('Invalid file format for Customer');
+                        return;
+                    }
+                    files = [{ input: customerFile, name: 'customer_file' }];
+                } else if (functionName === 'job') {
+                    const jobFile = document.getElementById('job_file')?.files[0];
+                    console.log('jobFile:', jobFile ? jobFile.name : 'None');
+                    if (!jobFile) {
+                        status.innerText = 'Please upload a Job CSV file.';
+                        status.style.color = 'red';
+                        console.log('No Job file uploaded');
+                        return;
+                    }
+                    if (!jobFile.name.endsWith('.csv')) {
+                        status.innerText = 'Job file must be a valid CSV file.';
+                        status.style.color = 'red';
+                        console.log('Invalid file format for Job');
+                        return;
+                    }
+                    files = [{ input: jobFile, name: 'job_file' }];
+                } else if (functionName === 'manual_journal') {
+                    const journalFile = document.getElementById('manual_journal_file')?.files[0];
+                    const coaFile = document.getElementById('coa_file_manual')?.files[0];
+                    const jobFile = document.getElementById('job_file_manual')?.files[0];
+                    console.log('journalFile:', journalFile ? journalFile.name : 'None');
+                    console.log('coaFile:', coaFile ? coaFile.name : 'None');
+                    console.log('jobFile:', jobFile ? jobFile.name : 'None');
+                    if (!journalFile || !coaFile || !jobFile) {
+                        status.innerText = 'Please upload Manual Journal, COA, and Job files.';
+                        status.style.color = 'red';
+                        console.log('Missing Manual Journal, COA, or Job file');
+                        return;
+                    }
+                    if (!journalFile.name.match(/\.(xlsx|xls|csv)$/)) {
+                        status.innerText = 'Manual Journal file must be Excel or CSV (.xlsx, .xls, .csv).';
+                        status.style.color = 'red';
+                        console.log('Invalid file format for Manual Journal');
+                        return;
+                    }
+                    if (!coaFile.name.endsWith('.csv') || !jobFile.name.endsWith('.csv')) {
+                        status.innerText = 'COA and Job files must be CSV files.';
+                        status.style.color = 'red';
+                        console.log('Invalid file format for COA or Job');
+                        return;
+                    }
+                    files = [
+                        { input: journalFile, name: 'manual_journal_file' },
+                        { input: coaFile, name: 'coa_file' },
+                        { input: jobFile, name: 'job_file' }
+                    ];
+                } else if (functionName === 'payroll_journal') {
+                    const payrollFile = document.getElementById('payroll_journal_file')?.files[0];
+                    console.log('payrollFile:', payrollFile ? payrollFile.name : 'None');
+                    if (!payrollFile) {
+                        status.innerText = 'Please upload a Payroll Journal Excel file.';
+                        status.style.color = 'red';
+                        console.log('No Payroll Journal file uploaded');
+                        return;
+                    }
+                    if (!payrollFile.name.match(/\.(xlsx|xls)$/)) {
+                        status.innerText = 'Payroll Journal file must be Excel (.xlsx or .xls).';
+                        status.style.color = 'red';
+                        console.log('Invalid file format for Payroll Journal');
+                        return;
+                    }
+                    files = [{ input: payrollFile, name: 'payroll_journal_file' }];
+                } else if (functionName === 'sales_invoice_service') {
+                    const serviceInvoiceFile = document.getElementById('service_invoice_file')?.files[0];
+                    const coaFile = document.getElementById('coa_file_sales_service')?.files[0];
+                    const jobFile = document.getElementById('job_file_sales_service')?.files[0];
+                    console.log('Sales Invoice Service - serviceInvoiceFile:', serviceInvoiceFile ? serviceInvoiceFile.name : 'None', serviceInvoiceFile ? `Size: ${serviceInvoiceFile.size} bytes` : '');
+                    console.log('Sales Invoice Service - coaFile:', coaFile ? coaFile.name : 'None', coaFile ? `Size: ${coaFile.size} bytes` : '');
+                    console.log('Sales Invoice Service - jobFile:', jobFile ? jobFile.name : 'None', jobFile ? `Size: ${jobFile.size} bytes` : '');
+                    if (!serviceInvoiceFile || !coaFile || !jobFile) {
+                        status.innerText = 'Please upload Sales Invoice Service, COA, and Job files. Service Invoice can be CSV or Excel; COA and Job must be CSV.';
+                        status.style.color = 'red';
+                        console.log('Missing Sales Invoice Service, COA, or Job file');
+                        return;
+                    }
+                    if (!serviceInvoiceFile.name.match(/\.(csv|xlsx|xls)$/)) {
+                        status.innerText = 'Sales Invoice Service file must be CSV or Excel (.csv, .xlsx, .xls).';
+                        status.style.color = 'red';
+                        console.log('Invalid file format for Sales Invoice Service:', serviceInvoiceFile.name);
+                        return;
+                    }
+                    if (!coaFile.name.endsWith('.csv') || !jobFile.name.endsWith('.csv')) {
+                        status.innerText = 'COA and Job files must be CSV files.';
+                        status.style.color = 'red';
+                        console.log('Invalid file format - COA:', coaFile.name, 'Job:', jobFile.name);
+                        return;
+                    }
+                    if (serviceInvoiceFile.size === 0 || coaFile.size === 0 || jobFile.size === 0) {
+                        status.innerText = 'One or more uploaded files are empty.';
+                        status.style.color = 'red';
+                        console.log('Empty file detected - Service Invoice:', serviceInvoiceFile.size, 'COA:', coaFile.size, 'Job:', jobFile.size);
+                        return;
+                    }
+                    files = [
+                        { input: serviceInvoiceFile, name: 'service_invoice_file' },
+                        { input: coaFile, name: 'coa_file_service' },
+                        { input: jobFile, name: 'job_file_service' }
+                    ];
+                    console.log('Sales Invoice Service - Files prepared:', files.map(f => ({ name: f.name, fileName: f.input.name })));
+                } else if (functionName === 'purchase_bill_service') {
+                    const invoiceFile = document.getElementById('purchase_bill_service_file')?.files[0];
+                    const coaFile = document.getElementById('coa_file_purchase_service')?.files[0];
+                    const jobFile = document.getElementById('job_file_purchase_service')?.files[0];
+                    console.log('purchaseBillServiceFile:', invoiceFile ? invoiceFile.name : 'None');
+                    console.log('coaFile:', coaFile ? coaFile.name : 'None');
+                    console.log('jobFile:', jobFile ? jobFile.name : 'None');
+                    if (!invoiceFile || !coaFile || !jobFile) {
+                        status.innerText = 'Please upload Purchase Bill Service, COA, and Job CSV files.';
+                        status.style.color = 'red';
+                        console.log('Missing Purchase Bill Service, COA, or Job file');
+                        return;
+                    }
+                    if (!invoiceFile.name.endsWith('.csv') || !coaFile.name.endsWith('.csv') || !jobFile.name.endsWith('.csv')) {
+                        status.innerText = 'Purchase Bill Service, COA, and Job files must be CSV files.';
+                        status.style.color = 'red';
+                        console.log('Invalid file format for Purchase Bill Service, COA, or Job');
+                        return;
+                    }
+                    files = [
+                        { input: invoiceFile, name: 'purchase_bill_service_file' },
+                        { input: coaFile, name: 'coa_file_service' },
+                        { input: jobFile, name: 'job_file_service' }
+                    ];
+                } else if (functionName === 'purchase_bill_product') {
+                    const invoiceFile = document.getElementById('purchase_bill_product_file')?.files[0];
+                    const coaFile = document.getElementById('coa_file_product')?.files[0];
+                    const itemFile = document.getElementById('item_file_product')?.files[0];
+                    const jobFile = document.getElementById('job_file_product')?.files[0];
+                    console.log('purchaseBillProductFile:', invoiceFile ? invoiceFile.name : 'None');
+                    console.log('coaFile:', coaFile ? coaFile.name : 'None');
+                    console.log('itemFile:', itemFile ? itemFile.name : 'None');
+                    console.log('jobFile:', jobFile ? jobFile.name : 'None');
+                    if (!invoiceFile || !coaFile || !itemFile || !jobFile) {
+                        status.innerText = 'Please upload Purchase Bill Product, COA, Item, and Job files.';
+                        status.style.color = 'red';
+                        console.log('Missing Purchase Bill Product, COA, Item, or Job file');
+                        return;
+                    }
+                    if (!invoiceFile.name.match(/\.(csv|xlsx|xls)$/) ||
+                        !coaFile.name.endsWith('.csv') ||
+                        !itemFile.name.endsWith('.csv') ||
+                        !jobFile.name.endsWith('.csv')) {
+                        status.innerText = 'Purchase Bill Product must be CSV/Excel, COA, Item, and Job must be CSV.';
+                        status.style.color = 'red';
+                        console.log('Invalid file format for Purchase Invoice Product, COA, Item, or Job');
+                        return;
+                    }
+                    files = [
+                        { input: invoiceFile, name: 'purchase_bill_product_file' },
+                        { input: coaFile, name: 'coa_file_product' },
+                        { input: itemFile, name: 'item_file_product' },
+                        { input: jobFile, name: 'job_file_product' }
+                    ];
+                } else if (functionName === 'invoice_payment') {
+                    const paymentFile = document.getElementById('invoice_payment_file')?.files[0];
+                    console.log('invoicePaymentFile:', paymentFile ? paymentFile.name : 'None');
+                    if (!paymentFile) {
+                        status.innerText = 'Please upload an Invoice Payment CSV or Excel file.';
+                        status.style.color = 'red';
+                        console.log('No Invoice Payment file uploaded');
+                        return;
+                    }
+                    if (!paymentFile.name.match(/\.(csv|xlsx|xls)$/)) {
+                        status.innerText = 'Invoice Payment file must be CSV or Excel (.csv, .xlsx, .xls).';
+                        status.style.color = 'red';
+                        console.log('Invalid file format for Invoice Payment');
+                        return;
+                    }
+                    files = [{ input: paymentFile, name: 'invoice_payment_file' }];
+                } else if (functionName === 'bill_payment') {
+                    const paymentFile = document.getElementById('bill_payment_file')?.files[0];
+                    console.log('billPaymentFile:', paymentFile ? paymentFile.name : 'None');
+                    if (!paymentFile) {
+                        status.innerText = 'Please upload a Bill Payment CSV or Excel file.';
+                        status.style.color = 'red';
+                        console.log('No Bill Payment file uploaded');
+                        return;
+                    }
+                    if (!paymentFile.name.match(/\.(csv|xlsx|xls)$/)) {
+                        status.innerText = 'Bill Payment file must be CSV or Excel (.csv, .xlsx, .xls).';
+                        status.style.color = 'red';
+                        console.log('Invalid file format for Bill Payment');
+                        return;
+                    }
+                    files = [{ input: paymentFile, name: 'bill_payment_file' }];
+                } else if (functionName === 'open_ap') {
+                    const openAPFile = document.getElementById('open_ap_file')?.files[0];
+                    console.log('openAPFile:', openAPFile ? openAPFile.name : 'None');
+                    if (!openAPFile) {
+                        status.innerText = 'Please upload an Open AP CSV or Excel file.';
+                        status.style.color = 'red';
+                        console.log('No Open AP file uploaded');
+                        return;
+                    }
+                    if (!openAPFile.name.match(/\.(csv|xlsx|xls)$/)) {
+                        status.innerText = 'Open AP file must be CSV or Excel (.csv, .xlsx, .xls).';
+                        status.style.color = 'red';
+                        console.log('Invalid file format for Open AP');
+                        return;
+                    }
+                    files = [{ input: openAPFile, name: 'open_ap_file' }];
+                } else if (functionName === 'open_ar') {
+                    const openARFile = document.getElementById('open_ar_file')?.files[0];
+                    console.log('openARFile:', openARFile ? openARFile.name : 'None');
+                    if (!openARFile) {
+                        status.innerText = 'Please upload an Open AR CSV or Excel file.';
+                        status.style.color = 'red';
+                        console.log('No Open AR file uploaded');
+                        return;
+                    }
+                    if (!openARFile.name.match(/\.(csv|xlsx|xls)$/)) {
+                        status.innerText = 'Open AR file must be CSV or Excel (.csv, .xlsx, .xls).';
+                        status.style.color = 'red';
+                        console.log('Invalid file format for Open AR');
+                        return;
+                    }
+                    files = [{ input: openARFile, name: 'open_ar_file' }];
+                } else if (functionName === 'receive_money') {
+                    const csvFile = document.getElementById('csv_file')?.files[0];
+                    const coaFile = document.getElementById('coa_file_receive')?.files[0];
+                    const jobFile = document.getElementById('job_file_receive')?.files[0];
+                    console.log('receiveMoney - csvFile:', csvFile ? csvFile.name : 'None');
+                    console.log('receiveMoney - coaFile:', coaFile ? coaFile.name : 'None');
+                    console.log('receiveMoney - jobFile:', jobFile ? jobFile.name : 'None');
+                    if (!csvFile || !coaFile || !jobFile) {
+                        status.innerText = 'Please upload Receive Money, COA, and Job files.';
+                        status.style.color = 'red';
+                        console.log('Missing Receive Money, COA, or Job file');
+                        return;
+                    }
+                    if (!csvFile.name.match(/\.(csv|xlsx|xls)$/)) {
+                        status.innerText = 'Receive Money file must be CSV or Excel (.csv, .xlsx, .xls).';
+                        status.style.color = 'red';
+                        console.log('Invalid file format for Receive Money');
+                        return;
+                    }
+                    if (!coaFile.name.endsWith('.csv') || !jobFile.name.endsWith('.csv')) {
+                        status.innerText = 'COA and Job files must be CSV files.';
+                        status.style.color = 'red';
+                        console.log('Invalid file format for COA or Job');
+                        return;
+                    }
+                    files = [
+                        { input: csvFile, name: 'csv_file' },
+                        { input: coaFile, name: 'coa_file' },
+                        { input: jobFile, name: 'job_file' }
+                    ];
+                } if (functionName === 'spend_money') {
+                    const spendMoneyInput = document.getElementById('spend_money_file');
+                    const coaInput = document.getElementById('coa_file');
+                    const jobInput = document.getElementById('job_file');
+            
+                    // Debug: Check if inputs exist
+                    if (debug) {
+                        console.log('spend_money_file element:', spendMoneyInput);
+                        console.log('coa_file element:', coaInput);
+                        console.log('job_file element:', jobInput);
+                    }
+            
+                    // Validate input existence
+                    if (!spendMoneyInput || !coaInput || !jobInput) {
+                        status.innerText = 'Error: One or more file input elements are missing in the DOM.';
+                        status.style.color = 'red';
+                        console.error('Missing input elements:', { spendMoneyInput, coaInput, jobInput });
+                        return false;
+                    }
+            
+                    const spendMoneyFile = spendMoneyInput.files[0];
+                    const coaFile = coaInput.files[0];
+                    const jobFile = jobInput.files[0];
+            
+                    // Debug: Log file selection status
+                    if (debug) {
+                        console.log('spendMoneyFile:', spendMoneyFile ? spendMoneyFile.name : 'None');
+                        console.log('coaFile:', coaFile ? coaFile.name : 'None');
+                        console.log('jobFile:', jobFile ? jobFile.name : 'None');
+                    }
+            
+                    // Validate file presence
+                    let missingFiles = [];
+                    if (!spendMoneyFile) missingFiles.push('Spend Money');
+                    if (!coaFile) missingFiles.push('COA');
+                    if (!jobFile) missingFiles.push('Job');
+            
+                    if (missingFiles.length > 0) {
+                        status.innerText = `Please upload the following files: ${missingFiles.join(', ')}.`;
+                        status.style.color = 'red';
+                        console.log('Missing files:', missingFiles);
+                        return false;
+                    }
+            
+                    // Validate file extensions
+                    const allowedExtensions = /\.(csv|xlsx|xls)$/i;
+                    const validateFileExtension = (file, fileName) => {
+                        if (!allowedExtensions.test(file.name)) {
+                            status.innerText = `${fileName} file must be CSV or Excel (.csv, .xlsx, .xls).`;
+                            status.style.color = 'red';
+                            console.log(`Invalid file format for ${fileName}: ${file.name}`);
+                            return false;
+                        }
+                        return true;
+                    };
+            
+                    if (!validateFileExtension(spendMoneyFile, 'Spend Money') ||
+                        !validateFileExtension(coaFile, 'COA') ||
+                        !validateFileExtension(jobFile, 'Job')) {
+                        return false;
+                    }
+            
+                    // Assign files
+                    files = [
+                        { input: spendMoneyFile, name: 'spend_money_file' },
+                        { input: coaFile, name: 'coa_file' },
+                        { input: jobFile, name: 'job_file' }
+                    ];
+                }       
+                   else if (functionName === 'item') {
+                    const fileInput = document.getElementById('fileInput')?.files[0];
+                    console.log('itemFile:', fileInput ? fileInput.name : 'None');
+                    if (!fileInput) {
+                        status.innerText = 'Please select an Item Master file.';
+                        status.style.color = 'red';
+                        console.log('No Item Master file selected');
+                        return;
+                    }
+                    if (!fileInput.name.match(/\.(csv|xlsx|xls)$/)) {
+                        status.innerText = 'Item Master file must be CSV or Excel (.csv, .xlsx, .xls).';
+                        status.style.color = 'red';
+                        console.log('Invalid file format for Item Master');
+                        return;
+                    }
+                    files = [{ input: fileInput, name: 'item_master_file' }];
+                } else {
+                    const fileInput = document.getElementById('fileInput')?.files[0];
+                    console.log('fileInput:', fileInput ? fileInput.name : 'None');
+                    if (!fileInput) {
+                        status.innerText = 'Please select a file to convert.';
+                        status.style.color = 'red';
+                        console.log('No file selected for single file input');
+                        return;
+                    }
+                    if (functionName === 'vendor' || functionName === 'customer') {
+                        if (!fileInput.name.endsWith('.csv')) {
+                            status.innerText = 'Please upload a valid CSV file.';
+                            status.style.color = 'red';
+                            console.log('Invalid file format for Vendor/Customer');
+                            return;
+                        }
+                    } else if (!fileInput.name.match(/\.(csv|xlsx|xls)$/)) {
+                        status.innerText = 'Please upload a valid CSV or Excel file.';
+                        status.style.color = 'red';
+                        console.log('Invalid file format for single file input');
+                        return;
+                    }
+                    files = [{ input: fileInput, name: `${functionName}_file` }];
+                }
+
+                console.log('Files to upload:', files.map(f => f.input.name));
+                const formData = new FormData();
+                files.forEach(file => {
+                    console.log(`Appending file to FormData: ${file.name}`, file.input);
+                    formData.append(file.name, file.input);
+                });
+                if (functionName === 'item') {
+                    const fileEncoding = document.getElementById('fileEncoding')?.value;
+                    if (fileEncoding) {
+                        formData.append('file_encoding', fileEncoding);
+                        console.log(`Appending file_encoding: ${fileEncoding}`);
+                    }
+                }
+                console.log('FormData entries:', [...formData.entries()].map(([key, value]) => `${key}: ${value.name || value} (size: ${value.size || 'N/A'} bytes)`));
+
+                status.innerText = `Uploading ${files.map(f => f.input.name).join(', ')}... Please wait.`;
+                status.style.color = '#FFD166';
+                console.log('FormData prepared, initiating fetch');
+
+                const urlMap = {
+                    'coa': '{% url "convert_coa" %}',
+                    'vendor': '{% url "convert_vendor" %}',
+                    'customer': '{% url "convert_customer" %}',
+                    'item': '{% url "convert_item_master" %}',
+                    'job': '{% url "convert_job" %}',
+                    'manual_journal': '{% url "convert_manual_journal" %}',
+                    'sales_invoice_product': '{% url "convert_sales_invoice_product" %}',
+                    'sales_invoice_service': '{% url "convert_sales_invoice_service" %}',
+                    'open_ap': '{% url "convert_open_ap" %}',
+                    'open_ar': '{% url "convert_open_ar" %}',
+                    'receive_money': '{% url "convert_receive_money" %}',
+                    'spend_money': '{% url "convert_spend_money" %}',
+                    'invoice_payment': '{% url "convert_invoice_payment" %}',
+                    'bill_payment': '{% url "convert_bill_payment" %}',
+                    'payroll_journal': '{% url "convert_payroll_journal" %}',
+                    'purchase_bill_service': '{% url "convert_purchase_bill_service" %}',
+                    'purchase_bill_product': '{% url "convert_purchase_bill_product" %}',
+                    'default': '{% url "default_function" %}'
+                };
+
+                let url = urlMap[functionName] || urlMap['default'];
+                console.log('Selected URL:', url);
+
+                if (url.includes('default_function') && functionName !== '') {
+                    status.innerText = `❌ The ${functionName.replace(/_/g, ' ')} function is not yet implemented.`;
+                    status.style.color = 'red';
+                    console.log(`Function ${functionName} not implemented`);
+                    return;
+                }
+
+                const csrfToken = getCookie('csrftoken');
+                if (!csrfToken) {
+                    console.warn('CSRF token not found');
+                    status.innerText = '❌ CSRF token missing. Please refresh the page and try again.';
+                    status.style.color = 'red';
+                    return;
+                }
+
+                console.log('Sending fetch request with CSRF token:', csrfToken);
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: formData
+                })
+                    .then(response => {
+                        console.log('Fetch response status:', response.status);
+                        console.log('Response headers:', [...response.headers.entries()]);
+                        if (!response.ok) {
+                            return response.text().then(text => {
+                                let errorMessage = 'Conversion failed.';
+                                if (response.headers.get('content-type')?.includes('application/json')) {
+                                    try {
+                                        const err = JSON.parse(text);
+                                        errorMessage = err.error || errorMessage;
+                                        if (functionName === 'customer' && errorMessage.includes('AccountNumber')) {
+                                            errorMessage += ' Ensure the CSV has columns: First Name, Co./Last Name. Card ID is optional for AccountNumber.';
+                                        }
+                                    } catch (e) {
+                                        console.error('Failed to parse JSON:', e);
+                                    }
+                                } else {
+                                    errorMessage = text || errorMessage;
+                                }
+                                console.error('Response error:', errorMessage);
+                                throw new Error(errorMessage);
+                            });
+                        }
+                        return response.blob();
+                    })
+                    .then(blob => {
+                        console.log('Blob received, size:', blob.size);
+                        const entityNameRaw = document.getElementById('entityName').value.trim();
+                        const entityName = entityNameRaw ? entityNameRaw.replace(/\s+/g, '_') : 'unnamed_entity';
+                        const now = new Date();
+                        const date = `${now.getDate().toString().padStart(2, '0')}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getFullYear()}_${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+                        const extension = functionName === 'purchase_invoice_product' || functionName === 'payroll_journal' ? 'xlsx' : 'csv';
+                        const fileName = `${entityName}_${functionName}_${date}.${extension}`;
+                        console.log('Generated file name:', fileName);
+
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = fileName;
+                        document.body.appendChild(a);
+                        a.click();
+                        URL.revokeObjectURL(url);
+                        a.remove();
+
+                        convertBtn.disabled = true;
+                        convertBtn.innerText = 'Converted';
+                        convertBtn.classList.remove('btn-primary');
+                        convertBtn.classList.add('btn-secondary');
+                        status.innerText = '✅ Conversion successful! File downloaded.';
+                        status.style.color = 'green';
+
+                        document.querySelectorAll('input[type="file"]').forEach(input => {
+                            input.value = '';
+                            console.log(`Cleared input after success: ${input.id}`);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Fetch error:', error.message);
+                        status.innerText = `❌ ${error.message}`;
+                        status.style.color = 'red';
+                        document.querySelectorAll('input[type="file"]').forEach(input => {
+                            input.value = '';
+                            console.log(`Cleared input on error: ${input.id}`);
+                        });
+                    });
+            } catch (error) {
+                console.error('convertFile error:', error);
+                const status = document.getElementById('status');
+                status.innerText = `❌ An error occurred: ${error.message}`;
+                status.style.color = 'red';
+                document.querySelectorAll('input[type="file"]').forEach(input => {
+                    input.value = '';
+                    console.log(`Cleared input on error: ${input.id}`);
+                });
+            }
+        }
+
+        function saveEntityName() {
+            console.log('saveEntityName() called');
+            const entityName = document.getElementById('entityName').value.trim();
+            if (!entityName) {
+                alert('Please enter an entity name.');
+                console.log('Entity name is empty');
+                return Promise.reject(new Error('Entity name is empty'));
+            }
+            console.log('Saving entity name:', entityName);
+            const csrfToken = getCookie('csrftoken');
+            if (!csrfToken) {
+                console.error('CSRF token not found');
+                alert('CSRF token missing. Please refresh the page.');
+                return Promise.reject(new Error('CSRF token missing'));
+            }
+            return fetch('{% url "save_entity_name" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ entity_name: entityName })
+            })
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Response data:', data);
+                    if (data.status === 'error') {
+                        alert(`Error: ${data.message}`);
+                        throw new Error(data.message);
+                    }
+                    console.log('Entity name saved successfully:', entityName);
+                })
+                .catch(error => {
+                    console.error('Error saving entity name:', error);
+                    alert(`Failed to save entity name: ${error.message}`);
+                    throw error;
+                });
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,38 @@
+from django.contrib import admin
+from django.urls import path
+from Home import views
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', views.index, name='index'),
+    path('login/', views.login_page, name='login'),
+    path('set-entity/', views.set_entity, name='set_entity'),
+    path('save-entity-name/', views.save_entity_name, name='save_entity_name'),
+    path('signup/', views.signup, name='signup'),
+    path('main/', views.main, name='main'),
+    path('myob-xero/', views.myob_to_xero, name='myob_to_xero'),
+    path('dashboard/', views.dashboard, name='dashboard'),
+    path('convert_coa/', views.convert_coa, name='convert_coa'),
+    path('convert_vendor/', views.convert_vendor, name='convert_vendor'),
+    path('convert_item_master/', views.convert_item_master, name='convert_item_master'),
+    path('convert_manual_journal/', views.convert_manual_journal, name='convert_manual_journal'),
+    path('convert_payroll_journal/', views.convert_payroll_journal, name='convert_payroll_journal'),
+    path('convert_purchase_bill_service/', views.convert_purchase_bill_service, name='convert_purchase_bill_service'),
+    path('convert_purchase_bill_product/', views.convert_purchase_bill_product, name='convert_purchase_bill_product'),
+    path('convert_job/', views.convert_job, name='convert_job'),
+    path('convert_sales_invoice_product/', views.convert_sales_invoice_product, name='convert_sales_invoice_product'),
+    path('convert_sales_invoice_service/', views.convert_sales_invoice_service, name='convert_sales_invoice_service'),
+    path('default_function/', views.default_function, name='default_function'),
+    path('upload/', views.upload_file_view, name='upload_file'),
+    path('download/<int:client_id>/', views.download_converted_file, name='download_converted_file'),
+    path('entity-clients/', views.entity_clients, name='entity_clients'),
+    path('my-clients/', views.my_clients, name='my_clients'),
+    path('convert-to-pdf/', views.convert_to_pdf, name='convert_to_pdf'),path('convert-customer/', views.convert_customer, name='convert_customer'),
+    path('myob-xero/', views.myob_xero_view, name='myob_xero'),
+    path('convert_open_ap/', views.convert_open_ap, name='convert_open_ap'),
+    path('convert_open_ar/', views.convert_open_ar, name='convert_open_ar'),
+    path('convert/invoice-payment/', views.convert_invoice_payment, name='convert_invoice_payment'),
+    path('convert/bill-payment/', views.convert_bill_payment, name='convert_bill_payment'),
+    path('convert_receive_money', views.convert_receive_money, name='convert_receive_money'),
+    path('convert_spend_money', views.convert_spend_money, name='convert_spend_money'),
+]

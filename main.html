@@ -1,0 +1,307 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MMC Convert || File Conversion</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: #0F141B;
+            color: #E5E7EB;
+            line-height: 1.6;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 5%;
+            background-color: #1A202C;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            margin-left: -37px;
+        }
+
+        .MMC-logo {
+            height: 50px;
+            width: 50px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .MMC-name {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #64FFDA;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: #E5E7EB;
+            text-decoration: none;
+            font-size: 1rem;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: #64FFDA;
+        }
+
+        .hero {
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+
+        .hero h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            color: #9CA3AF;
+        }
+
+        .entity-container {
+            margin-bottom: 1.5rem;
+        }
+
+        .entity-container label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+            color: #E5E7EB;
+        }
+
+        .entity-container input {
+            padding: 10px 16px;
+            width: 220px;
+            border: 1px solid #475569;
+            border-radius: 12px;
+            background: #1E2532;
+            color: #E5E7EB;
+            font-size: 1rem;
+            text-align: left;
+            box-shadow: none;
+            transition: border 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .entity-container input:hover,
+        .entity-container input:focus {
+            outline: none;
+            border-color: #64FFDA;
+            box-shadow: 0 0 6px rgba(100, 255, 218, 0.3);
+        }
+
+        .conversion-selection {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        #conversionType {
+            padding: 0.75rem;
+            font-size: 1rem;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            background-color: #1E2532;
+            color: #E5E7EB;
+            width: 250px;
+        }
+
+        button {
+            padding: 0.75rem 2rem;
+            font-size: 1rem;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(145deg, #64FFDA, #38C9A4);
+            color: #0F141B;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(100, 255, 218, 0.3);
+            transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+        }
+
+        button:hover {
+            background: linear-gradient(145deg, #46D8B0, #2BAF8C);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 18px rgba(100, 255, 218, 0.4);
+        }
+
+        .conversion-images {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .conversion-images:hover {
+            cursor: pointer;
+            transform: scale(1.01);
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .conversion-images img {
+            height: 130px;
+            width: auto;
+        }
+
+        .arrow-img {
+            width: 30px;
+            height: auto;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem 5%;
+            background-color: #1A202C;
+            color: #9CA3AF;
+            margin-top: 3rem;
+        }
+    </style>
+
+    <header>
+        <div class="logo-section">
+            <img class="MMC-logo" src="{% static 'Images/logo.jpeg' %}" alt="MMC Logo">
+            <div class="MMC-name">MMC Convert</div>
+        </div>
+        <nav class="nav-links">
+            <a href="#about">About</a>
+            <a href="#contact">Contact</a>
+            <a href="#converter">Convert</a>
+        </nav>
+    </header>
+
+    <section class="hero">
+        <h1>Choose Your Conversion Type</h1>
+
+        <div class="entity-container">
+            <label for="entityName">Entity Name:</label>
+            <input type="text" id="entityName" name="entity_name" placeholder="Enter entity name..."
+                value="{{ request.session.entity_name|default:'' }}">
+        </div>
+
+        <p>Select the type of conversion and proceed to upload your files.</p>
+        <div class="conversion-selection">
+            <select id="conversionType" onchange="updateImages()">
+                <option value="myob-xero">MYOB to Xero</option>
+                <option value="qbo-qbo">QBO to QBO</option>
+                <option value="sage-qbo">Sage One to QBO</option>
+                <option value="xero-xero">Xero to Xero</option>
+            </select>
+            <button onclick="redirectToConversion()">Proceed</button>
+        </div>
+
+        <div class="conversion-images">
+            <img id="sourceImg" src="{% static 'Images/myob_bg.png' %}" alt="Source System">
+            <img class="arrow-img" src="{% static 'Images/arrow_bg.png' %}" alt="Arrow">
+            <img id="targetImg" src="{% static 'Images/xero.webp' %}" alt="Target System">
+        </div>
+    </section>
+
+    <footer>
+        <p>© 2025 MMC Convert. All rights reserved.</p>
+    </footer>
+
+    <script>
+        function updateImages() {
+            const conversionType = document.getElementById('conversionType').value;
+            const sourceImg = document.getElementById('sourceImg');
+            const targetImg = document.getElementById('targetImg');
+
+            const imageMappings = {
+                "myob-xero": { source: "{% static 'Images/myob_bg.png' %}", target: "{% static 'Images/xero.webp' %}" },
+                "qbo-qbo": { source: "{% static 'Images/QBO_bg.png' %}", target: "{% static 'Images/QBO_bg.png' %}" },
+                "sage-qbo": { source: "{% static 'Images/sage_bg.png' %}", target: "{% static 'Images/QBO_bg.png' %}" },
+                "xero-xero": { source: "{% static 'Images/xero.webp' %}", target: "{% static 'Images/xero.webp' %}" }
+            };
+
+            sourceImg.src = imageMappings[conversionType].source;
+            targetImg.src = imageMappings[conversionType].target;
+        }
+
+        function saveEntityName() {
+            const entityName = document.getElementById('entityName').value.trim();
+            if (!entityName) {
+                alert('Please enter an entity name.');
+                return Promise.reject(new Error('Entity name is empty'));
+            }
+            console.log('Saving entity name:', entityName);
+            return fetch('{% url "save_entity_name" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ entity_name: entityName })
+            })
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Response data:', data);
+                    if (data.status === 'error') {
+                        alert(`Error: ${data.message}`);
+                        throw new Error(data.message);
+                    }
+                    console.log('Entity name saved successfully:', entityName);
+                })
+                .catch(error => {
+                    console.error('Error saving entity name:', error);
+                    alert(`Failed to save entity name: ${error.message}`);
+                    throw error;
+                });
+        }
+
+        function redirectToConversion() {
+            const conversionType = document.getElementById('conversionType').value;
+            console.log('Attempting to redirect to:', '/' + conversionType + '/'); // Debugging
+            saveEntityName()
+                .then(() => {
+                    console.log('Redirecting to:', '/' + conversionType + '/');
+                    window.location.href = '/' + conversionType + '/';
+                })
+                .catch(error => {
+                    console.error('Redirect failed:', error);
+                    alert('Failed to save entity name, proceeding anyway.');
+                    window.location.href = '/' + conversionType + '/';
+                });
+        }
+
+        // Save entity name on input change
+        document.getElementById('entityName').addEventListener('change', () => {
+            saveEntityName().catch(error => {
+                console.error('Error on input change:', error);
+            });
+        });
+    </script>
+</body>
+
+</html>
